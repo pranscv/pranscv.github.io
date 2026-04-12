@@ -980,8 +980,13 @@
         }
 
         .calendar-task-chip.other {
-            background-color: #f3f4f6;
-            color: #374151;
+            background-color: #fef08a;
+            color: #92400e;
+        }
+
+        .calendar-task-chip.test {
+            background-color: #ede9fe;
+            color: #5b21b6;
         }
 
         .calendar-more-chip {
@@ -1915,6 +1920,12 @@
             color: white;
         }
 
+        .summary-chip.subject-physics    { background: #2563eb; color: #fff; }
+        .summary-chip.subject-chemistry  { background: #16a34a; color: #fff; }
+        .summary-chip.subject-maths      { background: #dc2626; color: #fff; }
+        .summary-chip.subject-other      { background: #d97706; color: #fff; }
+        .summary-chip.subject-test       { background: #7c3aed; color: #fff; }
+
         .study-time {
             font-size: 14px;
             color: var(--text-secondary);
@@ -2170,8 +2181,13 @@
         }
 
         .subject-other {
-            background-color: #f3f4f6;
-            color: #374151;
+            background-color: #fef08a;
+            color: #92400e;
+        }
+
+        .subject-test {
+            background-color: #ede9fe;
+            color: #5b21b6;
         }
 
         .task-btn {
@@ -4071,10 +4087,33 @@
     display:flex;align-items:center;justify-content:center;
     font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
 ">
-  <div style="
+  <!-- Loading overlay inside login screen -->
+  <div id="login-loading" style="
+      display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+      position:absolute;inset:0;background:#f3f3f3;z-index:10;
+  ">
+    <div style="position:relative;width:56px;height:56px;">
+      <svg viewBox="0 0 56 56" style="width:56px;height:56px;animation:spin 1s linear infinite;">
+        <circle cx="28" cy="28" r="24" fill="none" stroke="#e5e5e5" stroke-width="4"/>
+        <circle cx="28" cy="28" r="24" fill="none" stroke="#2563eb" stroke-width="4"
+          stroke-dasharray="40 110" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="font-size:15px;font-weight:600;color:#1a1a1a;letter-spacing:-0.01em;">Logging in<span id="login-dots">...</span></div>
+    <div style="font-size:12px;color:#999;">Loading your planner</div>
+  </div>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes dotpulse {
+      0%,100% { opacity:1; } 50% { opacity:0.2; }
+    }
+  </style>
+
+  <div id="login-card" style="
       background:#fff;border-radius:24px;padding:40px 36px;
       box-shadow:0 8px 40px rgba(0,0,0,0.10);
       width:100%;max-width:360px;text-align:center;
+      transition: opacity 200ms ease, transform 200ms ease;
   ">
     <div style="font-size:32px;margin-bottom:6px;">📚</div>
     <h2 style="font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">JEE Planner</h2>
@@ -4119,65 +4158,93 @@
     onmouseover="this.style.background='#1d4ed8'"
     onmouseout="this.style.background='#2563eb'"
     >Continue</button>
-  </div>
-</div>
+  </div><!-- /login-card -->
+</div><!-- /login-screen -->
 
 <script>
-(function() {
-    const PASSWORDS = { parent: 'W(&.j33MGYr4', student: 'hahaha' };
-    const SESSION_KEY = '_planner_auth';
-    const ROLE_KEY    = '_planner_role';
-    let selectedRole = null;
+// ===== AUTH — sessionStorage so it clears on tab/browser close =====
+window._AUTH = {
+    PASSWORDS: { parent: 'W(&.j33MGYr4', student: 'hahaha' },
+    KEY: '_planner_auth',
+    ROLE: '_planner_role',
+    selectedRole: null,
 
-    // Check if already authenticated — defer so enableParentReadOnly is defined
-    window._loginCheck = function() {
-        if ((window._realLS || localStorage).getItem(SESSION_KEY) === '1') {
-            document.getElementById('login-screen').style.display = 'none';
-            if ((window._realLS || localStorage).getItem(ROLE_KEY) === 'parent') {
-                if (typeof enableParentReadOnly === 'function') enableParentReadOnly();
-            }
+    getAuth()  { return sessionStorage.getItem(this.KEY); },
+    getRole()  { return sessionStorage.getItem(this.ROLE); },
+    setAuth(role) {
+        sessionStorage.setItem(this.KEY, '1');
+        sessionStorage.setItem(this.ROLE, role);
+    },
+    clearAuth() {
+        sessionStorage.removeItem(this.KEY);
+        sessionStorage.removeItem(this.ROLE);
+    },
+
+    // Called after ALL scripts have loaded (see bottom of file)
+    init() {
+        if (this.getAuth() === '1') {
+            this.showLoadingThenEnter(this.getRole(), false);
         }
-    };
-    // Run after all scripts load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(window._loginCheck, 0));
-    } else {
-        setTimeout(window._loginCheck, 0);
-    }
+    },
 
-    window.loginSelectRole = function(role) {
-        selectedRole = role;
-        // Highlight selected
-        document.getElementById('role-parent').style.borderColor  = role === 'parent'  ? '#2563eb' : '#e5e5e5';
-        document.getElementById('role-student').style.borderColor = role === 'student' ? '#2563eb' : '#e5e5e5';
-        document.getElementById('role-parent').style.background   = role === 'parent'  ? '#eff6ff' : '#fff';
-        document.getElementById('role-student').style.background  = role === 'student' ? '#eff6ff' : '#fff';
-        document.getElementById('login-pass-wrap').style.display = 'block';
-        document.getElementById('login-btn').style.display = 'block';
-        document.getElementById('login-err').style.display = 'none';
-        setTimeout(() => document.getElementById('login-pass').focus(), 50);
-    };
+    showLoadingThenEnter(role, animate) {
+        const screen = document.getElementById('login-screen');
+        const loading = document.getElementById('login-loading');
+        const card    = document.getElementById('login-card');
 
-    window.loginSubmit = function() {
-        if (!selectedRole) return;
-        const entered = document.getElementById('login-pass').value;
-        if (entered === PASSWORDS[selectedRole]) {
-            (window._realLS || localStorage).setItem(SESSION_KEY, '1');
-            (window._realLS || localStorage).setItem(ROLE_KEY, selectedRole);
-            const screen = document.getElementById('login-screen');
-            screen.style.transition = 'opacity 300ms ease';
-            screen.style.opacity = '0';
+        if (animate) {
+            // Show loading state inside login screen
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.97)';
+            loading.style.display = 'flex';
             setTimeout(() => {
-                screen.style.display = 'none';
-                if (selectedRole === 'parent') enableParentReadOnly();
-            }, 300);
+                screen.style.transition = 'opacity 400ms ease';
+                screen.style.opacity = '0';
+                setTimeout(() => {
+                    screen.style.display = 'none';
+                    if (role === 'parent' && typeof enableParentReadOnly === 'function') enableParentReadOnly();
+                }, 400);
+            }, 1200);
         } else {
-            document.getElementById('login-err').style.display = 'block';
-            document.getElementById('login-pass').value = '';
-            document.getElementById('login-pass').focus();
+            // Already authenticated, skip animation
+            screen.style.display = 'none';
+            if (role === 'parent' && typeof enableParentReadOnly === 'function') enableParentReadOnly();
         }
-    };
-})();
+    }
+};
+
+window.loginSelectRole = function(role) {
+    window._AUTH.selectedRole = role;
+    document.getElementById('role-parent').style.borderColor  = role === 'parent'  ? '#2563eb' : '#e5e5e5';
+    document.getElementById('role-student').style.borderColor = role === 'student' ? '#2563eb' : '#e5e5e5';
+    document.getElementById('role-parent').style.background   = role === 'parent'  ? '#eff6ff' : '#fff';
+    document.getElementById('role-student').style.background  = role === 'student' ? '#eff6ff' : '#fff';
+    document.getElementById('login-pass-wrap').style.display = 'block';
+    document.getElementById('login-btn').style.display = 'block';
+    document.getElementById('login-err').style.display = 'none';
+    setTimeout(() => document.getElementById('login-pass').focus(), 50);
+};
+
+window.loginSubmit = function() {
+    const role    = window._AUTH.selectedRole;
+    const entered = document.getElementById('login-pass').value;
+    if (!role) return;
+    if (entered === window._AUTH.PASSWORDS[role]) {
+        window._AUTH.setAuth(role);
+        window._AUTH.showLoadingThenEnter(role, true);
+    } else {
+        document.getElementById('login-err').style.display = 'block';
+        document.getElementById('login-pass').value = '';
+        document.getElementById('login-pass').focus();
+    }
+};
+
+window.handleSignOut = function() {
+    if (confirm('Are you sure you want to sign out?')) {
+        window._AUTH.clearAuth();
+        location.reload();
+    }
+};
 </script>
 
 <script>
@@ -4203,7 +4270,9 @@ function enableParentReadOnly() {
         .task-name, .duration-input, .task-input, .modal-input,
         .add-exam-input, #mock-exam-name, #mock-exam-date,
         #mock-math-scored, #mock-physics-scored, #mock-chemistry-scored,
-        .status-select, .subject-select, .form-select, select
+        .status-select, .subject-select, .form-select, select,
+        input[type="checkbox"], input[type="radio"], input[type="number"],
+        input[type="text"], input[type="date"], input[type="password"]
         { pointer-events: none !important; }
 
         #parent-readonly-badge {
@@ -4291,14 +4360,6 @@ Storage.prototype.setItem = function(key, value) {
     _origLSSet.call(this, key, value);
 };
 
-// Sign out handler
-function handleSignOut() {
-    if (confirm('Are you sure you want to sign out?')) {
-        (window._realLS || localStorage).removeItem('_planner_auth');
-        (window._realLS || localStorage).removeItem('_planner_role');
-        location.reload();
-    }
-}
 </script>
     <div class="header-shell">
         <!-- Top Bar -->
@@ -5430,7 +5491,8 @@ function handleSignOut() {
                     { value: 'Physics', color: '#dbeafe' },
                     { value: 'Chemistry', color: '#fef3c7' },
                     { value: 'Maths', color: '#ede9fe' },
-                    { value: 'Other', color: '#f3f4f6' }
+                    { value: 'Other', color: '#fef08a' },
+                    { value: 'Test', color: '#ede9fe' }
                 ],
                 customColumns: [],
                 headers: {
@@ -9683,7 +9745,7 @@ function handleSignOut() {
                 'Chemistry': { background: '#A1E2A0', color: '#1a5c1a' },
                 'Physics': { background: '#D4EEFE', color: '#1d4ed8' },
                 'Maths': { background: '#EA9999', color: '#7a1212' },
-                'Other': { background: '#f3f4f6', color: '#374151' },
+                'Other': { background: '#fde68a', color: '#92400e' },
                 'Test': { background: '#e0d7f8', color: '#5b21b6' }
             };
             const color = colors[subject];
@@ -11290,6 +11352,10 @@ function handleSignOut() {
       }, 4000);
     }
   })();
+  </script>
+  <script>
+    // Init auth after all scripts loaded
+    if (typeof window._AUTH !== "undefined") window._AUTH.init();
   </script>
   </body>
   </html>
