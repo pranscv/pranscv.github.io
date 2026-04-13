@@ -4731,12 +4731,13 @@ Storage.prototype.setItem = function(key, value) {
         }
 
         function setCalendarToggleContent() {
-            calendarToggleTop.innerHTML = calendarCollapsed
+            if (calendarToggleTop) calendarToggleTop.innerHTML = calendarCollapsed
                 ? '<i class="bi bi-chevron-right"></i><span>Calendar</span>'
                 : '<i class="bi bi-chevron-down"></i><span>Calendar</span>';
         }
 
         function applyCalendarVisibility() {
+            if (!calendarContainer) return;
             calendarContainer.classList.toggle('collapsed', calendarCollapsed);
             calendarContainer.style.display = calendarCollapsed ? 'none' : 'block';
             calendarContainer.setAttribute('aria-hidden', calendarCollapsed ? 'true' : 'false');
@@ -4824,8 +4825,8 @@ Storage.prototype.setItem = function(key, value) {
             updateUI();
             updatePlannerOptionsWithTrackers();
             updateFontSizePreview();
-            setCalendarToggleContent();
-            applyCalendarVisibility();
+            setCalendarToggleContent?.();
+            applyCalendarVisibility?.();
             updateHeaderCollapseUI();
         }
 
@@ -5011,11 +5012,11 @@ Storage.prototype.setItem = function(key, value) {
             }
 
             // Calendar
-            calendarToggleTop.addEventListener('click', toggleCalendar);
+            calendarToggleTop?.addEventListener('click', toggleCalendar);
             themeToggle.addEventListener('click', toggleTheme);
             headerCollapseBtn.addEventListener('click', toggleTopBar);
-            prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
-            nextMonthBtn.addEventListener('click', () => navigateMonth(1));
+            prevMonthBtn?.addEventListener('click', () => navigateMonth(-1));
+            nextMonthBtn?.addEventListener('click', () => navigateMonth(1));
 
             // Settings
             const accentColorOptions = document.querySelectorAll('.accent-color-option');
@@ -6657,7 +6658,7 @@ Storage.prototype.setItem = function(key, value) {
             input.select();
         }
 
-        const GEMINI_API_KEY = 'AIzaSyBQux8yWn7XvMy5TwcBB4eH6PKQMAi_BAY';
+        const GEMINI_API_KEY = 'AIzaSyCnvMme7LcKs6kV99jNrfHIW1gnJ-seIJs';
         const GEMINI_SUBJECT_MODEL = 'gemini-2.0-flash';
         const subjectDetectionCache = new Map();
         const taskAutocorrectCache = new Map();
@@ -8392,6 +8393,7 @@ Storage.prototype.setItem = function(key, value) {
         }
 
         function renderMiniCalendar() {
+            if (!calendarGrid || !calendarMonthTitle) return;
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                 'July', 'August', 'September', 'October', 'November', 'December'];
             calendarMonthTitle.textContent = `${monthNames[currentCalendarDate.getMonth()]} ${currentCalendarDate.getFullYear()}`;
@@ -8835,7 +8837,7 @@ Storage.prototype.setItem = function(key, value) {
 
         function setMainViewMode(mode) {
             mainViewMode = mode;
-            calendarToggleTop.style.display = mode === 'calendar' ? 'none' : 'block';
+            if (calendarToggleTop) calendarToggleTop.style.display = mode === 'calendar' ? 'none' : 'block';
             renderMainContent();
         }
 
@@ -9180,8 +9182,8 @@ Storage.prototype.setItem = function(key, value) {
 
         function toggleCalendar() {
             calendarCollapsed = !calendarCollapsed;
-            setCalendarToggleContent();
-            applyCalendarVisibility();
+            setCalendarToggleContent?.();
+            applyCalendarVisibility?.();
             saveData();
         }
 
